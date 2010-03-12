@@ -1,0 +1,10 @@
+Makefile*
+backup*
+src/release/*
+src/build/*
+release/*
+plugins/*/release
+*.deb
+*.o
+moc_*
+ui_*
