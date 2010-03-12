@@ -49,9 +49,9 @@ PlatformUnix::PlatformUnix(int& argc, char** argv) :
 }
 
 /*
-PlatformUnix::PlatformUnix() : PlatformBase() 		
+PlatformUnix::PlatformUnix() : PlatformBase()     
 {
-	alpha.reset();
+  alpha.reset();
 //    alpha = NULL;
     icons.reset();
 }
@@ -77,15 +77,15 @@ PlatformUnix::~PlatformUnix()
 QList<Directory> PlatformUnix::getDefaultCatalogDirectories() {
     QList<Directory> list;
     const char *dirs[] = { "/usr/share/applications/",
-			   "/usr/local/share/applications/",
-			   "/usr/share/gdm/applications/",
-			   "/usr/share/applications/kde/",
-			   "~/.local/share/applications/"};
+         "/usr/local/share/applications/",
+         "/usr/share/gdm/applications/",
+         "/usr/share/applications/kde/",
+         "~/.local/share/applications/"};
     QStringList l;
     l << "*.desktop";
     
     for(int i = 0; i < 5; i++)
-	list.append(Directory(dirs[i],l,false,false,100));
+  list.append(Directory(dirs[i],l,false,false,100));
 
     list.append(Directory("~",QStringList(),true,false,0));
     
@@ -113,7 +113,7 @@ QHash<QString, QList<QString> > PlatformUnix::getDirectories() {
     out["portDB"] += qApp->applicationDirPath() + "/launchy.db";
     
     if (QFile::exists(out["skins"].last() + "/Default"))
-	out["defSkin"] += out["skins"].last() + "/Default";
+  out["defSkin"] += out["skins"].last() + "/Default";
     else
       out["defSkin"] += out["skins"].first() + "/Default";
 
@@ -128,10 +128,10 @@ QHash<QString, QList<QString> > PlatformUnix::getDirectories() {
 bool PlatformUnix::CreateAlphaBorder(QWidget* w, QString ImageName)
 {
 //   if (alpha)
-//	delete alpha;
+//  delete alpha;
   
     if (ImageName == "")
-	ImageName = alphaFile;
+  ImageName = alphaFile;
     alphaFile = ImageName;
     alpha.reset( new AlphaBorder(w, ImageName) ); 
     return true;
@@ -147,7 +147,7 @@ bool PlatformUnix::supportsAlphaBorder() const
 
 void PlatformUnix::alterItem(CatItem* item) {
     if (!item->fullPath.endsWith(".desktop", Qt::CaseInsensitive))
-	return;
+  return;
 
     QString locale = QLocale::system().name();
     
@@ -155,29 +155,32 @@ void PlatformUnix::alterItem(CatItem* item) {
 
     QFile file(item->fullPath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-	return;
+  return;
 
     QString name = "";
     QString icon = "";
     QString exe = "";
+    bool need_terminal = false;
     while(!file.atEnd()) {
-	QString line = file.readLine();
-	
-	if (line.startsWith("Name[" + locale, Qt::CaseInsensitive)) 
-	    name = line.split("=")[1].trimmed();
-	
+  QString line = file.readLine();
+  
+  if (line.startsWith("Name[" + locale, Qt::CaseInsensitive)) 
+      name = line.section("=",1).trimmed();
+  
 
-	else if (line.startsWith("Name=", Qt::CaseInsensitive)) 
-	    name = line.split("=")[1].trimmed();
+  else if (line.startsWith("Name=", Qt::CaseInsensitive)) 
+      name = line.section("=",1).trimmed();
 
-	else if (line.startsWith("Icon", Qt::CaseInsensitive))
-	    icon = line.split("=")[1].trimmed();
-	else if (line.startsWith("Exec", Qt::CaseInsensitive))
-	    exe = line.split("=")[1].trimmed();	
+  else if (line.startsWith("Icon", Qt::CaseInsensitive))
+      icon = line.section("=",1).trimmed();
+  else if (line.startsWith("Exec", Qt::CaseInsensitive))
+      exe = line.section("=",1).trimmed();  
+  else if (line.startsWith("Term", Qt::CaseInsensitive))
+      need_terminal = line.section("=",1).trimmed().toLower() == "true";
     }
     if (name.size() >= item->shortName.size() - 8) {
-	item->shortName = name;
-	item->lowName = item->shortName.toLower();
+  item->shortName = name;
+  item->lowName = item->shortName.toLower();
     }
 
     // Don't index desktop items wthout icons
@@ -203,12 +206,11 @@ void PlatformUnix::alterItem(CatItem* item) {
        stuff from the working directory - if it doesnt exsist, use it anyway */
     if(!exe.contains(QRegExp("^.?.?/"))){
         foreach(QString line, QProcess::systemEnvironment()) {
-            if (!line.startsWith("Path", Qt::CaseInsensitive))
+            if (!line.startsWith("Path=", Qt::CaseInsensitive))
                 continue;
 
-            QStringList spl = line.split("=");
-            QStringList spl2 = spl[1].split(":");
-            foreach(QString dir, spl2) {
+            QStringList spl = line.section("=",1).split(":");
+            foreach(QString dir, spl) {
                 QString tmp = dir + "/" + exe;
                 if (QFile::exists(tmp)) {
                     exe = tmp;
@@ -219,8 +221,10 @@ void PlatformUnix::alterItem(CatItem* item) {
         }
     }
     
-    
-    item->fullPath = exe + " " + allExe.join(" ");
+    if (need_terminal)
+      item->fullPath = "/usr/bin/x-terminal-emulator -e " + exe + " " + allExe.join(" ");
+    else
+      item->fullPath = exe + " " + allExe.join(" ");
 
     // Cache the icon for this desktop file
     //shared_ptr<UnixIconProvider> u(dynamic_pointer_cast<UnixIconProvider>(icons));
@@ -244,37 +248,37 @@ void PlatformUnix::alterItem(CatItem* item) {
 
 QString PlatformUnix::expandEnvironmentVars(QString txt)
 {
-	QStringList list = QProcess::systemEnvironment();
-	txt.replace('~', "$HOME$");
-	QString delim("$");
-	QString out = "";
-	int curPos = txt.indexOf(delim, 0);
-	if (curPos == -1) return txt;
+  QStringList list = QProcess::systemEnvironment();
+  txt.replace('~', "$HOME$");
+  QString delim("$");
+  QString out = "";
+  int curPos = txt.indexOf(delim, 0);
+  if (curPos == -1) return txt;
 
-	while(curPos != -1)
-	{
-		int nextPos = txt.indexOf("$", curPos+1);
-		if (nextPos == -1) 
-		{
-			out += txt.mid(curPos+1);
-			break;
-		}
-		QString var = txt.mid(curPos+1, nextPos-curPos-1);
-		bool found = false;
-		foreach(QString s, list)
-		{
-			if (s.startsWith(var, Qt::CaseInsensitive))
-			{
-				found = true;
-				out += s.mid(var.length()+1);
-				break;
-			}			
-		}
-		if (!found)
-			out += "$" + var;
-		curPos = nextPos;
-	}
-	return out;
+  while(curPos != -1)
+  {
+    int nextPos = txt.indexOf("$", curPos+1);
+    if (nextPos == -1) 
+    {
+      out += txt.mid(curPos+1);
+      break;
+    }
+    QString var = txt.mid(curPos+1, nextPos-curPos-1);
+    bool found = false;
+    foreach(QString s, list)
+    {
+      if (s.startsWith(var, Qt::CaseInsensitive))
+      {
+        found = true;
+        out += s.mid(var.length()+1);
+        break;
+      }     
+    }
+    if (!found)
+      out += "$" + var;
+    curPos = nextPos;
+  }
+  return out;
 }
 
 
